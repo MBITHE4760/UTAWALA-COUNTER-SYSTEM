@@ -41,42 +41,32 @@ void enable_interrupts()
 	EIMSK|=(1<<INT4);//external interrupt request 0 enable
 	EICRB|=(1<<ISC40);//trigger INTO 0n any edge. Interrupt 0 sense control
 	
-// 	Magnetic reed switch-ladies bathroom door
-// 		EIMSK|=(1<<INT4);//external interrupt request 0 enable
-// 		EICRB|=(1<<ISC41)|(0<<ISC40);//trigger INTO 0n falling edge. Interrupt 0 sense control
-	
 	//water flow sensor-ladies shower
 	EIMSK|=(1<<INT5);//external interrupt request 0 enable
 	EICRB|=(1<<ISC51)|(1<<ISC50);//trigger INTO 0n rising edge. Interrupt 0 sense control
 
 }
-// void TIMER_BEGIN()
-// {
-// 	//16-bit timer
-// 	OCR1AL=62500;//62500*256=16MHz
-// 	OCR1AH=62500>>8;
-// 	TIMSK1=(1<<OCIE1A);
-// 	TCCR1B=(1<<WGM12)|(1<<CS12);//prescaler of 256
-// }
 void start_timer()
 {
-	OCR1AL=62500;//62500*256=16MHz
-	OCR1AH=62500>>8;
-	TIMSK1=(1<<OCIE1A);
-	TCCR1B=(1<<WGM12)|(1<<CS12);//prescaler of 256	
+	//TCNT1=0;
+	OCR1AL=62500;//62500*256=16MHz //output compare register low
+	OCR1AH=62500>>8; // output compare register high
+	TCCR1B|=(1<<WGM12); //CTC-clear timer on compare match 
+	TIMSK1|=(1<<OCIE1A);//timer 1 interrupt mask enable=timer compare interrupt
+	TCCR1B|=(1<<CS12); //timer counter control register //prescaler of 256
 }
 int main(void)
 {
 	UART0_BEGIN();
-	//TIMER_BEGIN();
 	enable_interrupts();
+	//start_timer();
 	sei();
 	while (1)
 	{
-		for(i=0; i<15; i++)
-		{
-			_delay_ms(1000);
-		}
+// 		for(i=0; i<15; i++)
+// 		{
+// 			_delay_ms(1000);
+// 		}
 		num_ladiesbafu=ladiesbafu_count;
 		ladiesbafu_count=0;
 		
@@ -84,6 +74,7 @@ int main(void)
 		itoa(num_ladiesbafu,ch3,10);
 		
 		UART0_TRANSMIT(ch3);
+		UART0_TRANSMIT("\r\n");
 	}
 }
 ISR(USART0_RX_vect)
@@ -98,8 +89,7 @@ ISR(INT4_vect)
 	if (timer_interrupt == 0)
 	{
 		timer_interrupt=1;
-		//start timer
-		start_timer();
+		//start_timer();
 	}
 }
 ISR(INT5_vect)
@@ -107,30 +97,35 @@ ISR(INT5_vect)
 	if ((ladiesbafu_closed == true) && (waiting_for_ladiesbafu_door_to_open == false))
 	{
 		pulsecount_ladies++;
-		if (pulsecount_ladies > flowmeter_max)
-		{
-			ladiesbafu_count++;
-			
-			waiting_for_ladiesbafu_door_to_open=true;
-		}
 	}
 }
+
+// ISR(TIMER1_COMPA_vect)
+// {
+// 	if(((PIND) && (1<<PIND4)) == (0x00))//reed switch interrupt pin_____door open
+// 	{
+// 		ladiesbafu_closed=false;
+// 		waiting_for_ladiesbafu_door_to_open=false;
+// 	}
+// 	else
+// 	{
+// 		ladiesbafu_closed=true;
+// 		
+// 	}
+// 	timer_interrupt=false;
+// 	//disable timer interrupt
+// 	TCCR1B & = ~ (1<<WGM12);
+// }
 
 ISR(TIMER1_COMPA_vect)
 {
-	if(((PIND) && (1<<PIND4)) == (0x00))//reed switch interrupt pin_____door open
-	{
-		ladiesbafu_closed=false;
-		waiting_for_ladiesbafu_door_to_open=false;
-	}
-	else
-	{
-		ladiesbafu_closed=true;
-		
-	}
-	timer_interrupt=false;
-	//disable timer interrupt
-	TCCR1B=(1<<WGM12);
+// 	if (pulsecount_ladies > flowmeter_max)
+// 	{
+// 		//ladiesbafu_count++;
+// 		waiting_for_ladiesbafu_door_to_open=true;
+// 		ladiesbafu_closed=false;
+// 	}
+// 		TCCR1B &=~(1<<WGM12);
+ladiesbafu_count++;
 }
-
 
