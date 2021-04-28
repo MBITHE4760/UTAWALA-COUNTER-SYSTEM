@@ -10,6 +10,7 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <stdlib.h>
+int i;
 
 
 int num_ladiesbafu;
@@ -32,21 +33,29 @@ void UART0_BEGIN()
 int main(void)
 {
 	UART0_BEGIN();
-	OCR1AL=62500;//62500*256=16MHz //output compare register low
-	OCR1AH=62500>>8; // output compare register high
-	//OCR1A = 62500;
+	TCNT1=0;//initialize the counter value to zero
+	//OCR1AL=64;//15625*1024=16MHz //output compare register low
+	//OCR1AH=64>>8; // output compare register high
+	OCR1A = 15625;
 	TCCR1B |= (1 << WGM12);
 	// Set to CTC Mode
 	TIMSK1 |= (1 << OCIE1A);
 	//Set interrupt on compare match
-	TCCR1B |= (1 << CS12);
-	// set prescaler to 64 and starts PWM
+	TCCR1B |= (1 << CS12)|(1<<CS10);
+	// set prescaler to 1024 and starts PWM=the higher the prescaler the higher the precision
 	sei();
 	// enable interrupts
 	while (1);
 	{
 		_delay_us(1);
 		// we have a working timer
+		
+	}
+}
+
+ISR (TIMER1_COMPA_vect)
+{
+		count++;
 		num_ladiesbafu=count;
 		count=0;
 		
@@ -54,13 +63,6 @@ int main(void)
 		itoa(num_ladiesbafu,ch3,10);
 		
 		UART0_TRANSMIT(ch3);
-		UART0_TRANSMIT("\r\n");
-	}
-}
-
-ISR (TIMER1_COMPA_vect)
-{
-	// action to be done every 250us
-	count++;
+		UART0_TRANSMIT("\r\n");	
 }
 
